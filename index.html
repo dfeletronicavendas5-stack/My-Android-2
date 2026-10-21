@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>My Talking Android 3D - Fiesta Rocam 2011 & Pato Lanches</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #1a1a1a;
+            user-select: none;
+            touch-action: none;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+
+        #ui-container {
+            position: absolute;
+            top: env(safe-area-inset-top, 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 4px;
+            z-index: 10;
+            width: 98vw;
+            max-width: 500px;
+        }
+
+        .status-bar {
+            background: rgba(0, 0, 0, 0.75);
+            padding: 5px 8px;
+            border-radius: 12px;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            backdrop-filter: blur(8px);
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .progress-bg {
+            width: 40px;
+            height: 8px;
+            background-color: #444;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+
+        #energy-fill { background-color: #a4c639; width: 80%; }
+        #oil-fill { background-color: #f1c40f; width: 100%; }
+        #dirt-fill { background-color: #795548; width: 0%; }
+        #health-fill { background-color: #e74c3c; width: 100%; }
+        #xp-fill { background-color: #9b59b6; width: 0%; }
+
+        #controls {
+            position: absolute;
+            bottom: calc(env(safe-area-inset-bottom, 8px) + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 3px;
+            z-index: 10;
+            width: 98vw;
+            max-width: 520px;
+        }
+
+        .btn {
+            background: #a4c639;
+            color: #1a1a1a;
+            border: none;
+            padding: 8px 2px;
+            font-size: 9px;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+            background: #b5d74a;
+        }
+
+        .btn-sleep { background: #34495e; color: white; }
+        .btn-tv { background: #3498db; color: white; }
+        .btn-game { background: #e74c3c; color: white; }
+        .btn-shop { background: #f39c12; color: white; }
+        .btn-outdoor { background: #27ae60; color: white; }
+        .btn-work { background: #8e44ad; color: white; }
+        .btn-mechanic { background: #c0392b; color: white; }
+        .btn-brush { background: #16a085; color: white; }
+        .btn-car { background: #d35400; color: white; }
+
+        #drive-controls {
+            position: absolute;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+            gap: 20px;
+            z-index: 20;
+        }
+
+        .drive-btn {
+            background: rgba(255, 255, 255, 0.8);
+            border: 2px solid #333;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #dialog-box {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            color: #333;
+            padding: 10px 18px;
+            border-radius: 18px;
+            font-weight: bold;
+            font-size: 13px;
+            display: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 10;
+            pointer-events: none;
+            text-align: center;
+            max-width: 85vw;
+        }
+
+        #file-input { display: none; }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 92vw;
+            max-width: 420px;
+            background: rgba(20, 20, 25, 0.95);
+            border: 2px solid #a4c639;
+            border-radius: 18px;
+            padding: 14px;
+            color: white;
+            z-index: 100;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            text-align: center;
+        }
+
+        #shop-modal { border-color: #f39c12; }
+        #game-modal { border-color: #e74c3c; }
+
+        .modal-title {
+            margin: 0 0 10px 0;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        #mini-game-canvas {
+            width: 100%;
+            height: 200px;
+            background: #111;
+            border-radius: 10px;
+            display: block;
+            margin: 10px 0;
+            border: 1px solid #444;
+        }
+
+        .shop-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 6px;
+            max-height: 50vh;
+            overflow-y: auto;
+            margin-bottom: 10px;
+        }
+
+        .shop-item {
+            background: #333;
+            padding: 8px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+        }
+
+        .shop-item button {
+            background: #a4c639;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .shop-item button.btn-sell {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .shop-section-title {
+            font-size: 12px;
+            font-weight: bold;
+            color: #f39c12;
+            margin: 8px 0 4px 0;
+            text-align: left;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <div id="ui-container">
+        <div class="status-bar"><span>💰</span><span id="coins-display" style="color:#f1c40f;">100</span></div>
+        <div class="status-bar"><span>⭐ Nv.<span id="level-display">1</span></span><div class="progress-bg"><div id="xp-fill" class="progress-fill"></div></div></div>
+        <div class="status-bar"><span>🔋</span><div class="progress-bg"><div id="energy-fill" class="progress-fill"></div></div></div>
+        <div class="status-bar"><span>🛢️</span><div class="progress-bg"><div id="oil-fill" class="progress-fill"></div></div></div>
+        <div class="status-bar"><span>🛠️</span><div class="progress-bg"><div id="health-fill" class="progress-fill"></div></div></div>
+        <div class="status-bar"><span>💩</span><div class="progress-bg"><div id="dirt-fill" class="progress-fill"></div></div></div>
+    </div>
+
+    <div id="dialog-box">Olá!</div>
+
+    <div id="controls">
+        <button class="btn btn-sleep" onclick="sleepAndroid()">😴 Dormir</button>
+        <button class="btn btn-outdoor" id="location-btn" onclick="toggleLocation()">🌳 Parque</button>
+        <button class="btn btn-car" id="car-btn" onclick="toggleDriveMode()">🚗 Dirigir</button>
+        <button class="btn btn-tv" onclick="triggerTVUpload()">📺 TV</button>
+        <button class="btn btn-game" onclick="openGameMenu()">🎮 Minigame</button>
+        <button class="btn btn-shop" onclick="openShop()">🛒 Loja</button>
+        <button class="btn btn-work" onclick="goToSchool()">🏫 Escola</button>
+        <button class="btn btn-work" onclick="workAtHome()">💻 Trabalho</button>
+        <button class="btn btn-mechanic" onclick="goToMechanic()">🛠️ Mecânico</button>
+        <button class="btn btn-brush" onclick="brushTeeth()">🪥 Dentes</button>
+        <button class="btn" onclick="cleanAndroid()">🧼 Banho</button>
+    </div>
+
+    <div id="drive-controls">
+        <button class="drive-btn" onpointerdown="moveCarLeft()" onpointerup="stopCarMove()">⬅️</button>
+        <button class="drive-btn" onpointerdown="moveCarRight()" onpointerup="stopCarMove()">➡️</button>
+    </div>
+
+    <input type="file" id="file-input" accept="video/*,image/*,audio/*" onchange="handleMediaUpload(event)">
+
+    <!-- MODAL MINIGAME -->
+    <div id="game-modal" class="modal">
+        <h2 id="modal-game-title" class="modal-title" style="color:#e74c3c;">🍎 Minigame</h2>
+        <p id="modal-game-desc" style="font-size:11px; margin:0;">Mova o cesto para coletar pontos!</p>
+        <canvas id="mini-game-canvas"></canvas>
+        <button class="btn" style="background:#e74c3c; color:white; width:100%;" onclick="closeGameMenu()">Sair</button>
+    </div>
+
+    <!-- MODAL LOJA, PATO LANCHES, CUSTOMIZAÇÃO & VENDAS -->
+    <div id="shop-modal" class="modal">
+        <h2 class="modal-title" style="color:#f39c12;">Loja & Garagem</h2>
+        <div class="shop-grid">
+            <div class="shop-section-title">📦 Fiestas Abandonados (<span id="abandoned-count">0</span>)</div>
+            <div class="shop-item">
+                <span>🛠️ Reformar Fiesta Abandonado (-$300)</span>
+                <button onclick="restoreAbandonedFiesta()">Reformar</button>
+            </div>
+            <div class="shop-item">
+                <span>💰 Vender Abandonado Como Sucata (+$5.000)</span>
+                <button class="btn-sell" onclick="sellAbandonedFiesta()">Vender</button>
+            </div>
+
+            <div class="shop-section-title">🦆 Pato Lanches (Tudo por $250,00)</div>
+            <div class="shop-item">
+                <span>🍕 Pizza Gourmet (+100 Bateria) - $250</span>
+                <button onclick="buyPatoItem('pizza')">Comprar</button>
+            </div>
+            <div class="shop-item">
+                <span>🍔 Lanche Especial (+100 Bateria) - $250</span>
+                <button onclick="buyPatoItem('burger')">Comprar</button>
+            </div>
+            <div class="shop-item">
+                <span>🥤 Refrigerante Gelado (+60 Bateria) - $250</span>
+                <button onclick="buyPatoItem('soda')">Comprar</button>
+            </div>
+            <div class="shop-item">
+                <span>🛢️ Óleo Premium (+100 Óleo) - $250</span>
+                <button onclick="buyPatoItem('oil')">Comprar</button>
+            </div>
+            <div class="shop-item">
+                <span>☕ Café Turbinado (+80 Bateria) - $250</span>
+                <button onclick="buyPatoItem('coffee')">Comprar</button>
+            </div>
+
+            <div class="shop-section-title">Consumíveis & Itens Básicos</div>
+            <div class="shop-item">
+                <span>🛢️ Óleo Lubrificante (+40) - $15</span>
+                <button onclick="buyItem('oil')">Comprar</button>
+            </div>
+            <div class="shop-item">
+                <span>🍔 Recarga Bateria (+30) - $20</span>
+                <button onclick="buyItem('food')">Comprar</button>
+            </div>
+            <div class="shop-item">
+                <span id="notebook-shop-label">💻 Notebook Trabalho - $150</span>
+                <button id="notebook-buy-btn" onclick="buyItem('notebook')">Comprar</button>
+            </div>
+
+            <div class="shop-section-title">💰 Vender Itens & Veículos</div>
+            <div class="shop-item">
+                <span>🚘 Vender Ford Fiesta 2011 (+$28.000)</span>
+                <button class="btn-sell" onclick="sellItem('fiesta')">Vender</button>
+            </div>
+            <div class="shop-item">
+                <span>💻 Vender Notebook (+$100)</span>
+                <button class="btn-sell" onclick="sellItem('notebook')">Vender</button>
+            </div>
+            <div class="shop-item">
+                <span>🚙 Vender Sedan Azul (+$120)</span>
+                <button class="btn-sell" onclick="sellItem('blueCar')">Vender</button>
+            </div>
+            <div class="shop-item">
+                <span>🛠️ Vender Buggy (+$180)</span>
+                <button class="btn-sell" onclick="sellItem('buggy')">Vender</button>
+            </div>
+
+            <div class="shop-section-title">🎨 Customizar Casa</div>
+            <div class="shop-item">
+                <span>🎨 Parede Azul - $30</span>
+                <button onclick="changeWallColor(0x2980b9)">Aplicar</button>
+            </div>
+            <div class="shop-item">
+                <span>🎨 Parede Amarela - $30</span>
+                <button onclick="changeWallColor(0xf1c40f)">Aplicar</button>
+            </div>
+            <div class="shop-item">
+                <span>🎨 Parede Vermelha - $30</span>
+                <button onclick="changeWallColor(0xc0392b)">Aplicar</button>
+            </div>
+            <div class="shop-item">
+                <span>🪵 Piso Madeira - $50</span>
+                <button onclick="changeFloorColor(0x5a3d28)">Aplicar</button>
+            </div>
+            <div class="shop-item">
+                <span>⬜ Piso Claro - $50</span>
+                <button onclick="changeFloorColor(0xecf0f1)">Aplicar</button>
+            </div>
+
+            <div class="shop-section-title">🚗 Garagem & Veículos</div>
+            <div class="shop-item">
+                <span id="car-fiesta-label">🚘 Ford Fiesta Rocam 2011 - $150</span>
+                <button id="car-fiesta-btn" onclick="buyCar('fiesta')">Comprar</button>
+            </div>
+            <div class="shop-item">
+                <span id="car-blue-label">🚙 Sedan Azul - $200</span>
+                <button id="car-blue-btn" onclick="buyCar('blue')">Comprar</button>
+            </div>
+            <div class="shop-item">
+                <span id="car-buggy-label">🛠️ Montar Buggy - $300</span>
+                <button id="car-buggy-btn" onclick="buyCar('buggy')">Montar</button>
+            </div>
+        </div>
+        <button class="btn" style="background:#e74c3c; color:white; width:100%" onclick="closeShop()">Fechar</button>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script>
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x22242b);
+
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+        
+        function adjustCamera() {
+            if (window.innerWidth / window.innerHeight < 0.8) {
+                camera.position.set(0, 2.5, 9.5);
+            } else {
+                camera.position.set(0, 2.2, 7.5);
+            }
+        }
+        adjustCamera();
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        container.appendChild(renderer.domElement);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(5, 10, 7);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        // CENÁRIO INTERNO
+        const indoorGroup = new THREE.Group();
+
+        const wallMat = new THREE.MeshStandardMaterial({ color: 0x3d414d, side: THREE.DoubleSide });
+        const wall = new THREE.Mesh(new THREE.PlaneGeometry(20, 10), wallMat);
+        wall.position.set(0, 3.8, -3);
+        indoorGroup.add(wall);
+
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x2b2d35 });
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.position.y = -1.2;
+        indoorGroup.add(floor);
+
+        // CAMA 3D
+        const bedGroup = new THREE.Group();
+        const bedFrame = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.4, 3.2), new THREE.MeshStandardMaterial({ color: 0x5a3d28 }));
+        bedFrame.position.y = -0.9;
+
+        const mattress = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.3, 3.0), new THREE.MeshStandardMaterial({ color: 0xecf0f1 }));
+        mattress.position.y = -0.6;
+
+        const blanket = new THREE.Mesh(new THREE.BoxGeometry(2.02, 0.32, 2.0), new THREE.MeshStandardMaterial({ color: 0x3498db }));
+        blanket.position.set(0, -0.58, 0.4);
+
+        const pillow = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.2, 0.6), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+        pillow.position.set(0, -0.4, -1.0);
+
+        bedGroup.add(bedFrame, mattress, blanket, pillow);
+        bedGroup.position.set(3.2, 0, -1.2);
+        indoorGroup.add(bedGroup);
+
+        // JANELA
+        const windowGroup = new THREE.Group();
+        const windowFrame = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.8, 0.1), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+        const windowGlass = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 1.6), new THREE.MeshBasicMaterial({ color: 0x87ceeb }));
+        windowGlass.position.z = 0.06;
+        windowGroup.add(windowFrame, windowGlass);
+        windowGroup.position.set(-3.5, 3.0, -2.9);
+        indoorGroup.add(windowGroup);
+
+        // TELEVISÃO
+        const tvGroup = new THREE.Group();
+        const tvFrame = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.5, 0.1), new THREE.MeshStandardMaterial({ color: 0x111111 }));
+        
+        const tvCanvas = document.createElement('canvas');
+        tvCanvas.width = 512;
+        tvCanvas.height = 320;
+        const tvCtx = tvCanvas.getContext('2d');
+        tvCtx.fillStyle = '#050505';
+        tvCtx.fillRect(0, 0, 512, 320);
+        tvCtx.fillStyle = '#a4c639';
+        tvCtx.font = 'bold 24px sans-serif';
+        tvCtx.textAlign = 'center';
+        tvCtx.fillText('TV DESLIGADA', 256, 160);
+
+        const tvTexture = new THREE.CanvasTexture(tvCanvas);
+        const tvScreenMat = new THREE.MeshBasicMaterial({ map: tvTexture });
+        const tvScreen = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 1.3), tvScreenMat);
+        tvScreen.position.z = 0.06;
+
+        tvGroup.add(tvFrame, tvScreen);
+        tvGroup.position.set(0, 3.2, -2.85);
+        indoorGroup.add(tvGroup);
+
+        // MESA DE TRABALHO
+        const deskGroup = new THREE.Group();
+        const deskMat = new THREE.MeshStandardMaterial({ color: 0x5a3d28 });
+        const deskTop = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.1, 1.2), deskMat);
+        
+        const legMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+        const leg1 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.9, 0.1), legMat);
+        leg1.position.set(-1.1, -0.45, 0.5);
+        const leg2 = leg1.clone(); leg2.position.set(1.1, -0.45, 0.5);
+        const leg3 = leg1.clone(); leg3.position.set(-1.1, -0.45, -0.5);
+        const leg4 = leg1.clone(); leg4.position.set(1.1, -0.45, -0.5);
+
+        const chairSeat = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.1, 0.8), new THREE.MeshStandardMaterial({ color: 0x333333 }));
+        chairSeat.position.set(0, -0.3, 0.9);
+
+        deskGroup.add(deskTop, leg1, leg2, leg3, leg4, chairSeat);
+        deskGroup.position.set(-1.5, 0.2, -1.8);
+        indoorGroup.add(deskGroup);
+
+        // NOTEBOOK 3D
+        const laptopGroup = new THREE.Group();
+        const laptopBase = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.03, 0.4), new THREE.MeshStandardMaterial({ color: 0x888888 }));
+        const laptopScreen = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 0.03), new THREE.MeshStandardMaterial({ color: 0x111111 }));
+        laptopScreen.position.set(0, 0.2, -0.2);
+        laptopGroup.add(laptopBase, laptopScreen);
+        laptopGroup.position.set(-1.5, 0.3, -1.8);
+        laptopGroup.visible = false;
+        indoorGroup.add(laptopGroup);
+
+        scene.add(indoorGroup);
+
+        // CENÁRIO EXTERNO (PARQUE)
+        const outdoorGroup = new THREE.Group();
+        outdoorGroup.visible = false;
+
+        const grass = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.MeshStandardMaterial({ color: 0x27ae60 }));
+        grass.rotation.x = -Math.PI / 2;
+        grass.position.y = -1.2;
+        outdoorGroup.add(grass);
+
+        function buildTree(x, z) {
+            const tree = new THREE.Group();
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 1.2, 8), new THREE.MeshStandardMaterial({ color: 0x8b5a2b }));
+            trunk.position.y = -0.5;
+            const leaves = new THREE.Mesh(new THREE.ConeGeometry(0.8, 1.8, 8), new THREE.MeshStandardMaterial({ color: 0x2e8b57 }));
+            leaves.position.y = 0.8;
+            tree.add(trunk, leaves);
+            tree.position.set(x, 0, z);
+            return tree;
+        }
+        outdoorGroup.add(buildTree(-3, -2));
+        outdoorGroup.add(buildTree(3.5, -3));
+        outdoorGroup.add(buildTree(-4, 2));
+
+        scene.add(outdoorGroup);
+
+        // CENÁRIO CIDADE (DIRIGIR)
+        const cityGroup = new THREE.Group();
+        cityGroup.visible = false;
+
+        const road = new THREE.Mesh(new THREE.PlaneGeometry(10, 100), new THREE.MeshStandardMaterial({ color: 0x333333 }));
+        road.rotation.x = -Math.PI / 2;
+        road.position.set(0, -1.2, -40);
+        cityGroup.add(road);
+
+        for (let i = 0; i < 10; i++) {
+            const stripe = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 3), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+            stripe.rotation.x = -Math.PI / 2;
+            stripe.position.set(0, -1.19, -i * 10);
+            cityGroup.add(stripe);
+        }
+
+        // CARROS DO JOGADOR
+        const playerCar = new THREE.Group();
+        
+        // Modelo 1: Carro Laranja (Padrão)
+        const orangeCarMesh = new THREE.Group();
+        const carBody = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.8, 2.8), new THREE.MeshStandardMaterial({ color: 0xd35400 }));
+        carBody.position.y = -0.6;
+        const carCabin = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.6, 1.4), new THREE.MeshStandardMaterial({ color: 0x222222 }));
+        carCabin.position.set(0, -0.1, -0.2);
+        orangeCarMesh.add(carBody, carCabin);
+
+        // Modelo 2: Sedan Azul
+        const blueCarMesh = new THREE.Group();
+        const blueBody = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.7, 3.0), new THREE.MeshStandardMaterial({ color: 0x2980b9 }));
+        blueBody.position.y = -0.6;
+        const blueCabin = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.6, 1.6), new THREE.MeshStandardMaterial({ color: 0xdddddd }));
+        blueCabin.position.set(0, -0.1, -0.1);
+        blueCarMesh.add(blueBody, blueCabin);
+        blueCarMesh.visible = false;
+
+        // Modelo 3: Buggy Montado
+        const buggyMesh = new THREE.Group();
+        const buggyFrame = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.5, 2.5), new THREE.MeshStandardMaterial({ color: 0x27ae60 }));
+        buggyFrame.position.y = -0.6;
+        const buggyBars = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.9, 1.2), new THREE.MeshStandardMaterial({ color: 0x111111, wireframe: true }));
+        buggyBars.position.set(0, 0.1, 0);
+        buggyMesh.add(buggyFrame, buggyBars);
+        buggyMesh.visible = false;
+
+        // Modelo 4: Ford Fiesta Rocam 2011 (Prata Hatch Compacto)
+        const fiestaMesh = new THREE.Group();
+        const fiestaBody = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.75, 2.6), new THREE.MeshStandardMaterial({ color: 0xbdc3c7, roughness: 0.2 }));
+        fiestaBody.position.y = -0.6;
+        const fiestaCabin = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.6, 1.3), new THREE.MeshStandardMaterial({ color: 0x111111 }));
+        fiestaCabin.position.set(0, -0.05, -0.2);
+        fiestaMesh.add(fiestaBody, fiestaCabin);
+        fiestaMesh.visible = false;
+
+        playerCar.add(orangeCarMesh, blueCarMesh, buggyMesh, fiestaMesh);
+
+        // Rodas Gerais
+        const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.25, 16);
+        const wheelMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
+        const w1 = new THREE.Mesh(wheelGeo, wheelMat); w1.rotation.z = Math.PI / 2; w1.position.set(-0.9, -0.8, 0.8);
+        const w2 = w1.clone(); w2.position.x = 0.9;
+        const w3 = w1.clone(); w3.position.z = -0.8;
+        const w4 = w2.clone(); w4.position.z = -0.8;
+
+        playerCar.add(w1, w2, w3, w4);
+        playerCar.position.set(0, 0, 2);
+        cityGroup.add(playerCar);
+
+        // CARROS DO TRÁFEGO
+        const trafficCars = [];
+        const carColors = [0x9b59b6, 0x3498db, 0xf1c40f, 0xe74c3c];
+        
+        for (let i = 0; i < 4; i++) {
+            const tCar = new THREE.Group();
+            const tBody = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.7, 2.6), new THREE.MeshStandardMaterial({ color: carColors[i % carColors.length] }));
+            tBody.position.y = -0.6;
+            tCar.add(tBody);
+            
+            tCar.position.set((Math.random() - 0.5) * 6, 0, -15 - i * 20);
+            trafficCars.push(tCar);
+            cityGroup.add(tCar);
+        }
+
+        // MOEDAS COLETÁVEIS NA CORRIDA
+        const driveCoins = [];
+        const coinGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.1, 16);
+        const coinMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, metalness: 0.8, roughness: 0.2 });
+
+        for (let i = 0; i < 5; i++) {
+            const coinMesh = new THREE.Mesh(coinGeo, coinMat);
+            coinMesh.rotation.x = Math.PI / 2;
+            coinMesh.position.set((Math.random() - 0.5) * 6, -0.6, -10 - i * 15);
+            driveCoins.push(coinMesh);
+            cityGroup.add(coinMesh);
+        }
+
+        scene.add(cityGroup);
+
+        // ANDROID 3D
+        const androidGroup = new THREE.Group();
+        const androidMaterial = new THREE.MeshStandardMaterial({ color: 0xa4c639, roughness: 0.3 });
+
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 1.4, 32), androidMaterial);
+        body.position.y = 0.5;
+        androidGroup.add(body);
+
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.9, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), androidMaterial);
+        head.position.y = 1.25;
+        androidGroup.add(head);
+
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const leftEye = new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 16), eyeMat);
+        leftEye.position.set(-0.35, 1.55, 0.75);
+        const rightEye = leftEye.clone();
+        rightEye.position.x = 0.35;
+        androidGroup.add(leftEye, rightEye);
+
+        // DENTES
+        const teethGroup = new THREE.Group();
+        const toothMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        for (let i = -2; i <= 2; i++) {
+            const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.04), toothMat);
+            tooth.position.set(i * 0.1, 1.2, 0.82);
+            teethGroup.add(tooth);
+        }
+        androidGroup.add(teethGroup);
+
+        // ESCOVA DE DENTES
+        const toothbrushGroup = new THREE.Group();
+        const brushHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.6), new THREE.MeshStandardMaterial({ color: 0x3498db }));
+        brushHandle.rotation.z = Math.PI / 4;
+        const brushHead = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.15, 0.08), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+        brushHead.position.set(0.2, 0.2, 0);
+        toothbrushGroup.add(brushHandle, brushHead);
+        toothbrushGroup.position.set(0.4, 1.2, 0.9);
+        toothbrushGroup.visible = false;
+        androidGroup.add(toothbrushGroup);
+
+        const armGeo = new THREE.CylinderGeometry(0.18, 0.18, 1.0, 16);
+        const leftArm = new THREE.Mesh(armGeo, androidMaterial);
+        leftArm.position.set(-1.15, 0.5, 0);
+        const rightArm = leftArm.clone();
+        rightArm.position.x = 1.15;
+        androidGroup.add(leftArm, rightArm);
+
+        const phone = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.3, 0.02), new THREE.MeshStandardMaterial({ color: 0x111111 }));
+        phone.position.set(0, -0.3, 0.2);
+        rightArm.add(phone);
+
+        const legGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.7, 16);
+        const leftLeg = new THREE.Mesh(legGeo, androidMaterial);
+        leftLeg.position.set(-0.4, -0.55, 0);
+        const rightLeg = leftLeg.clone();
+        rightLeg.position.x = 0.4;
+        androidGroup.add(leftLeg, rightLeg);
+
+        scene.add(androidGroup);
+
+        // ESTADOS DO JOGO
+        let coins = 100;
+        let energy = 80;
+        let oilLevel = 100;
+        let systemHealth = 100;
+        let dirtLevel = 0;
+        let xp = 0;
+        let level = 1;
+        let abandonedFiestas = 0;
+
+        let hasNotebook = false;
+        let hasBlueCar = false;
+        let hasBuggy = false;
+        let hasFiesta = false;
+        let selectedCar = 'orange';
+
+        let isOutdoor = false;
+        let isDriving = false;
+        let isSleeping = false;
+        let isWorking = false;
+        let isAtSchool = false;
+        let isBrushing = false;
+
+        let carMoveDir = 0;
+
+        let activeVideo = null;
+        let activeAudio = null;
+        let activeMediaMode = null;
+
+        function speak(text) {
+            const dialog = document.getElementById('dialog-box');
+            dialog.innerText = text;
+            dialog.style.display = 'block';
+            setTimeout(() => { dialog.style.display = 'none'; }, 4000);
+        }
+
+        function addXP(amount) {
+            xp += amount;
+            if (xp >= 100) {
+                level++;
+                xp = 0;
+                abandonedFiestas += 2;
+                speak("Subi para o nível " + level + "! Cresci e ganhei 2 Ford Fiesta Rocam 2011 abandonados!");
+                updateGrowth();
+            }
+            updateUI();
+        }
+
+        function updateGrowth() {
+            const scaleFactor = 1 + (level - 1) * 0.08;
+            androidGroup.scale.set(scaleFactor, scaleFactor, scaleFactor);
+        }
+
+        function updateUI() {
+            document.getElementById('coins-display').innerText = coins;
+            document.getElementById('level-display').innerText = level;
+            document.getElementById('xp-fill').style.width = xp + '%';
+            document.getElementById('energy-fill').style.width = energy + '%';
+            document.getElementById('oil-fill').style.width = oilLevel + '%';
+            document.getElementById('health-fill').style.width = systemHealth + '%';
+            document.getElementById('dirt-fill').style.width = dirtLevel + '%';
+            document.getElementById('abandoned-count').innerText = abandonedFiestas;
+
+            document.getElementById('oil-fill').style.backgroundColor = oilLevel <= 20 ? '#e74c3c' : '#f1c40f';
+        }
+
+        // REFORMA DE FIESTAS ABANDONADOS
+        function restoreAbandonedFiesta() {
+            if (abandonedFiestas <= 0) {
+                speak("Você não tem nenhum Ford Fiesta abandonado!");
+                return;
+            }
+            if (coins < 300) {
+                speak("Preciso de $300 para reformar o Ford Fiesta 2011!");
+                return;
+            }
+
+            coins -= 300;
+            abandonedFiestas--;
+            hasFiesta = true;
+            document.getElementById('car-fiesta-label').innerText = "🚘 Ford Fiesta 2011 (Reformado!)";
+            document.getElementById('car-fiesta-btn').innerText = "Usar";
+            selectCar('fiesta');
+            speak("Fiesta 2011 reformado com sucesso! Agora você pode pilotá-lo!");
+            updateUI();
+        }
+
+        function sellAbandonedFiesta() {
+            if (abandonedFiestas <= 0) {
+                speak("Você não tem Ford Fiesta abandonado para vender!");
+                return;
+            }
+
+            abandonedFiestas--;
+            coins += 5000;
+            speak("Vendeu 1 Ford Fiesta abandonado como sucata por $5.000!");
+            updateUI();
+        }
+
+        // DORMIR NA CAMA
+        function sleepAndroid() {
+            if (isSleeping || isAtSchool || isDriving || isOutdoor) return;
+            isSleeping = true;
+            speak("Indo dormir na cama... zZZz");
+
+            androidGroup.position.set(3.2, -0.1, -1.2);
+            androidGroup.rotation.x = -Math.PI / 2;
+            androidGroup.rotation.z = Math.PI;
+
+            setTimeout(() => {
+                energy = Math.min(100, energy + 50);
+                androidGroup.position.set(0, 0, 0);
+                androidGroup.rotation.x = 0;
+                androidGroup.rotation.z = 0;
+                isSleeping = false;
+                speak("Acordei renovado e cheio de energia!");
+                updateUI();
+            }, 5000);
+        }
+
+        // COMPRAS NO PATO LANCHES
+        function buyPatoItem(patoItem) {
+            if (coins < 250) {
+                speak("Preciso de $250,00 para comprar no Pato Lanches!");
+                return;
+            }
+
+            coins -= 250;
+
+            if (patoItem === 'pizza') {
+                energy = 100;
+                speak("Deliciosa Pizza do Pato Lanches! Bateria 100%!");
+            } else if (patoItem === 'burger') {
+                energy = 100;
+                speak("Lanche sensacional do Pato Lanches! Bateria cheia!");
+            } else if (patoItem === 'soda') {
+                energy = Math.min(100, energy + 60);
+                speak("Refrigerante bem geladinho do Pato Lanches!");
+            } else if (patoItem === 'oil') {
+                oilLevel = 100;
+                speak("Óleo de alta qualidade do Pato Lanches! Óleo 100%!");
+            } else if (patoItem === 'coffee') {
+                energy = Math.min(100, energy + 80);
+                speak("Café reforçado do Pato Lanches! Bateria recuperada!");
+            }
+
+            addXP(15);
+            updateUI();
+        }
+
+        // SISTEMA DE VENDAS
+        function sellItem(item) {
+            if (item === 'fiesta') {
+                if (!hasFiesta) { speak("Você não possui um Ford Fiesta 2011!"); return; }
+                hasFiesta = false;
+                coins += 28000;
+                document.getElementById('car-fiesta-label').innerText = "🚘 Ford Fiesta Rocam 2011 - $150";
+                document.getElementById('car-fiesta-btn').innerText = "Comprar";
+                if (selectedCar === 'fiesta') selectCar('orange');
+                speak("Vendeu o Ford Fiesta 2011 por $28.000!");
+            } else if (item === 'notebook') {
+                if (!hasNotebook) { speak("Você não tem um Notebook para vender!"); return; }
+                hasNotebook = false;
+                laptopGroup.visible = false;
+                coins += 100;
+                document.getElementById('notebook-shop-label').innerText = "💻 Notebook Trabalho - $150";
+                document.getElementById('notebook-buy-btn').disabled = false;
+                speak("Vendeu o Notebook por $100!");
+            } else if (item === 'blueCar') {
+                if (!hasBlueCar) { speak("Você não tem o Sedan Azul!"); return; }
+                hasBlueCar = false;
+                coins += 120;
+                document.getElementById('car-blue-label').innerText = "🚙 Sedan Azul - $200";
+                document.getElementById('car-blue-btn').innerText = "Comprar";
+                if (selectedCar === 'blue') selectCar('orange');
+                speak("Vendeu o Sedan Azul por $120!");
+            } else if (item === 'buggy') {
+                if (!hasBuggy) { speak("Você não tem o Buggy!"); return; }
+                hasBuggy = false;
+                coins += 180;
+                document.getElementById('car-buggy-label').innerText = "🛠️ Montar Buggy - $300";
+                document.getElementById('car-buggy-btn').innerText = "Montar";
+                if (selectedCar === 'buggy') selectCar('orange');
+                speak("Vendeu o Buggy por $180!");
+            }
+            updateUI();
+        }
+
+        // CUSTOMIZAÇÃO DA CASA
+        function changeWallColor(colorHex) {
+            if (coins < 30) { speak("Preciso de $30 para mudar a cor da parede!"); return; }
+            coins -= 30;
+            wallMat.color.setHex(colorHex);
+            speak("Parede renovada com sucesso!");
+            updateUI();
+        }
+
+        function changeFloorColor(colorHex) {
+            if (coins < 50) { speak("Preciso de $50 para mudar o piso!"); return; }
+            coins -= 50;
+            floorMat.color.setHex(colorHex);
+            speak("Piso trocado!");
+            updateUI();
+        }
+
+        // CARROS
+        function buyCar(type) {
+            if (type === 'fiesta') {
+                if (hasFiesta) { selectCar('fiesta'); return; }
+                if (coins < 150) { speak("Preciso de $150 para comprar o Fiesta 2011!"); return; }
+                coins -= 150;
+                hasFiesta = true;
+                document.getElementById('car-fiesta-label').innerText = "🚘 Ford Fiesta 2011 (Adquirido)";
+                document.getElementById('car-fiesta-btn').innerText = "Usar";
+                selectCar('fiesta');
+                speak("Comprei o Ford Fiesta Rocam 2011!");
+            } else if (type === 'blue') {
+                if (hasBlueCar) { selectCar('blue'); return; }
+                if (coins < 200) { speak("Preciso de $200 para o Sedan Azul!"); return; }
+                coins -= 200;
+                hasBlueCar = true;
+                document.getElementById('car-blue-label').innerText = "🚙 Sedan Azul (Adquirido)";
+                document.getElementById('car-blue-btn').innerText = "Usar";
+                selectCar('blue');
+                speak("Comprei o Sedan Azul!");
+            } else if (type === 'buggy') {
+                if (hasBuggy) { selectCar('buggy'); return; }
+                if (coins < 300) { speak("Preciso de $300 para montar o Buggy!"); return; }
+                coins -= 300;
+                hasBuggy = true;
+                document.getElementById('car-buggy-label').innerText = "🛠️ Buggy (Montado)";
+                document.getElementById('car-buggy-btn').innerText = "Usar";
+                selectCar('buggy');
+                speak("Montei um Buggy incrível para rodar pela cidade!");
+            }
+            updateUI();
+        }
+
+        function selectCar(carType) {
+            selectedCar = carType;
+            orangeCarMesh.visible = (carType === 'orange');
+            blueCarMesh.visible = (carType === 'blue');
+            buggyMesh.visible = (carType === 'buggy');
+            fiestaMesh.visible = (carType === 'fiesta');
+            speak("Carro selecionado na garagem!");
+        }
+
+        // MODO DIRIGIR
+        function toggleDriveMode() {
+            if (isSleeping || isAtSchool) return;
+
+            if (systemHealth <= 0) {
+                speak("🚨 O carro está quebrado! Você precisa levá-lo ao mecânico antes de dirigir!");
+                return;
+            }
+
+            isDriving = !isDriving;
+            cityGroup.visible = isDriving;
+            indoorGroup.visible = !isDriving && !isOutdoor;
+            outdoorGroup.visible = !isDriving && isOutdoor;
+            androidGroup.visible = !isDriving;
+
+            document.getElementById('drive-controls').style.display = isDriving ? 'flex' : 'none';
+            document.getElementById('car-btn').innerText = isDriving ? "🏠 Voltar" : "🚗 Dirigir";
+
+            if (isDriving) {
+                speak("Dirigindo pela cidade! Pegue as moedas na pista!");
+                camera.position.set(0, 3, 6);
+                camera.lookAt(0, 0, -5);
+            } else {
+                adjustCamera();
+                camera.lookAt(0, 0, 0);
+            }
+        }
+
+        function moveCarLeft() { carMoveDir = -1; }
+        function moveCarRight() { carMoveDir = 1; }
+        function stopCarMove() { carMoveDir = 0; }
+
+        window.addEventListener('keydown', (e) => {
+            if (!isDriving) return;
+            if (e.key === 'ArrowLeft' || e.key === 'a') carMoveDir = -1;
+            if (e.key === 'ArrowRight' || e.key === 'd') carMoveDir = 1;
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'ArrowRight' || e.key === 'd') carMoveDir = 0;
+        });
+
+        // ESCOVAR DENTES
+        function brushTeeth() {
+            if (isBrushing || isSleeping || isAtSchool || isDriving) return;
+            isBrushing = true;
+            toothbrushGroup.visible = true;
+            speak("Escovando os dentes para manter a higiene!");
+
+            let brushAnim = setInterval(() => {
+                toothbrushGroup.position.x = 0.3 + Math.sin(Date.now() * 0.01) * 0.15;
+            }, 50);
+
+            setTimeout(() => {
+                clearInterval(brushAnim);
+                toothbrushGroup.visible = false;
+                toothbrushGroup.position.x = 0.4;
+                isBrushing = false;
+                addXP(10);
+                dirtLevel = Math.max(0, dirtLevel - 15);
+                speak("Dentes limpinhos!");
+                updateUI();
+            }, 3000);
+        }
+
+        // MECÂNICO AUTOMÁTICO / MANUAL
+        function autoTowToMechanic() {
+            speak("🚨 O carro quebrou feio! Guincho acionado! Indo ao mecânico...");
+            
+            if (isDriving) {
+                isDriving = false;
+                cityGroup.visible = false;
+                indoorGroup.visible = true;
+                document.getElementById('drive-controls').style.display = 'none';
+                document.getElementById('car-btn').innerText = "🚗 Dirigir";
+                adjustCamera();
+                camera.lookAt(0, 0, 0);
+            }
+
+            androidGroup.visible = false;
+
+            setTimeout(() => {
+                androidGroup.visible = true;
+                systemHealth = 100;
+                oilLevel = 100;
+                addXP(10);
+                speak("Mecânico concluiu o reparo! O carro está pronto!");
+                updateUI();
+            }, 4000);
+        }
+
+        function goToMechanic() {
+            if (isAtSchool || isSleeping || isDriving) return;
+            if (coins < 30) {
+                speak("Preciso de $30 para a revisão no mecânico!");
+                return;
+            }
+
+            coins -= 30;
+            speak("Reparando o carro e os componentes do Android...");
+            androidGroup.visible = false;
+
+            setTimeout(() => {
+                androidGroup.visible = true;
+                systemHealth = 100;
+                oilLevel = 100;
+                addXP(20);
+                speak("Revisão concluída! Carro e sistema recuperados!");
+                updateUI();
+            }, 4000);
+        }
+
+        // MÍDIA E TV
+        function triggerTVUpload() {
+            if (isOutdoor || isSleeping || isAtSchool || isDriving) return;
+            document.getElementById('file-input').click();
+        }
+
+        function handleMediaUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            stopTVMedia();
+            const fileURL = URL.createObjectURL(file);
+
+            if (file.type.startsWith('video/')) {
+                activeMediaMode = 'video';
+                activeVideo = document.createElement('video');
+                activeVideo.src = fileURL;
+                activeVideo.loop = true;
+                activeVideo.play();
+                speak("Exibindo vídeo na TV!");
+            } else if (file.type.startsWith('image/')) {
+                activeMediaMode = 'image';
+                const img = new Image();
+                img.onload = () => {
+                    tvCtx.drawImage(img, 0, 0, 512, 320);
+                    tvTexture.needsUpdate = true;
+                };
+                img.src = fileURL;
+                speak("Exibindo imagem na TV!");
+            } else if (file.type.startsWith('audio/')) {
+                activeMediaMode = 'audio';
+                activeAudio = new Audio(fileURL);
+                activeAudio.play();
+                speak("Tocando áudio!");
+            }
+        }
+
+        function stopTVMedia() {
+            if (activeVideo) { activeVideo.pause(); activeVideo = null; }
+            if (activeAudio) { activeAudio.pause(); activeAudio = null; }
+            activeMediaMode = null;
+        }
+
+        // ROTINAS
+        function goToSchool() {
+            if (isAtSchool || isSleeping || isDriving) return;
+            if (energy < 15 || oilLevel < 10) {
+                speak("Preciso de óleo e energia para ir à escola!");
+                return;
+            }
+
+            isAtSchool = true;
+            androidGroup.visible = false;
+            speak("Fui para a escola!");
+
+            setTimeout(() => {
+                isAtSchool = false;
+                androidGroup.visible = true;
+                energy -= 15;
+                oilLevel -= 10;
+                coins += 35;
+                addXP(30);
+                speak("Voltei da escola!");
+            }, 10000);
+        }
+
+        function workAtHome() {
+            if (isAtSchool || isSleeping || isOutdoor || isDriving) return;
+            if (energy < 15 || oilLevel < 10) {
+                speak("Estou sem combustível para trabalhar...");
+                return;
+            }
+
+            isWorking = true;
+            energy -= 15;
+            oilLevel -= 10;
+            systemHealth = Math.max(0, systemHealth - 5);
+
+            androidGroup.position.set(-1.5, -0.1, -0.9);
+            leftLeg.rotation.x = -Math.PI / 2;
+            rightLeg.rotation.x = -Math.PI / 2;
+
+            if (hasNotebook) {
+                coins += 50;
+                addXP(40);
+                speak("Trabalhando no Notebook!");
+            } else {
+                coins += 20;
+                addXP(20);
+                speak("Trabalhando no Celular!");
+            }
+
+            setTimeout(() => {
+                isWorking = false;
+                androidGroup.position.set(0, 0, 0);
+                leftLeg.rotation.x = 0;
+                rightLeg.rotation.x = 0;
+            }, 4000);
+        }
+
+        // MINIGAME INTERATIVO
+        let miniCanvas, miniCtx, miniGameLoop;
+
+        function openGameMenu() {
+            if (energy < 10 || isDriving) {
+                speak("Não posso jogar agora!");
+                return;
+            }
+            document.getElementById('game-modal').style.display = 'block';
+            startCatchGame();
+        }
+
+        function closeGameMenu() {
+            document.getElementById('game-modal').style.display = 'none';
+            if (miniGameLoop) clearInterval(miniGameLoop);
+        }
+
+        function startCatchGame() {
+            miniCanvas = document.getElementById('mini-game-canvas');
+            miniCtx = miniCanvas.getContext('2d');
+            
+            let playerX = 130;
+            let appleX = Math.random() * 240 + 10;
+            let appleY = 0;
+
+            miniCanvas.onpointerdown = miniCanvas.onpointermove = (e) => {
+                const rect = miniCanvas.getBoundingClientRect();
+                playerX = e.clientX - rect.left - 20;
+            };
+
+            if (miniGameLoop) clearInterval(miniGameLoop);
+
+            miniGameLoop = setInterval(() => {
+                appleY += 4;
+                if (appleY > 180) {
+                    if (Math.abs(appleX - playerX) < 35) {
+                        coins += 10;
+                        addXP(10);
+                        energy = Math.max(0, energy - 2);
+                    }
+                    appleY = 0;
+                    appleX = Math.random() * 240 + 10;
+                }
+
+                miniCtx.fillStyle = '#111';
+                miniCtx.fillRect(0, 0, miniCanvas.width, miniCanvas.height);
+
+                miniCtx.fillStyle = '#e74c3c';
+                miniCtx.beginPath();
+                miniCtx.arc(appleX, appleY, 8, 0, Math.PI * 2);
+                miniCtx.fill();
+
+                miniCtx.fillStyle = '#a4c639';
+                miniCtx.fillRect(playerX, 175, 40, 10);
+            }, 30);
+        }
+
+        // AÇÕES GERAIS
+        function toggleLocation() {
+            if (isSleeping || isAtSchool || isDriving) return;
+            stopTVMedia();
+            isOutdoor = !isOutdoor;
+            indoorGroup.visible = !isOutdoor;
+            outdoorGroup.visible = isOutdoor;
+            document.getElementById('location-btn').innerText = isOutdoor ? "🏠 Casa" : "🌳 Parque";
+            scene.background = new THREE.Color(isOutdoor ? 0x87ceeb : 0x22242b);
+        }
+
+        function cleanAndroid() {
+            if (isAtSchool || isDriving) return;
+            dirtLevel = 0;
+            addXP(5);
+            speak("Estou limpinho!");
+            updateUI();
+        }
+
+        function openShop() { document.getElementById('shop-modal').style.display = 'block'; }
+        function closeShop() { document.getElementById('shop-modal').style.display = 'none'; }
+
+        function buyItem(item) {
+            if (item === 'oil' && coins >= 15) {
+                coins -= 15;
+                oilLevel = Math.min(100, oilLevel + 40);
+                speak("Óleo delicioso!");
+            } else if (item === 'food' && coins >= 20) {
+                coins -= 20;
+                energy = Math.min(100, energy + 30);
+                speak("Bateria recarregada!");
+            } else if (item === 'notebook' && coins >= 150 && !hasNotebook) {
+                coins -= 150;
+                hasNotebook = true;
+                laptopGroup.visible = true;
+                document.getElementById('notebook-shop-label').innerText = "💻 Notebook (Comprado)";
+                document.getElementById('notebook-buy-btn').disabled = true;
+                speak("Comprei um Notebook!");
+            }
+            updateUI();
+        }
+
+        setInterval(() => {
+            if (!isSleeping && !isAtSchool && !isDriving) {
+                coins += 1;
+                oilLevel = Math.max(0, oilLevel - 1);
+                if (oilLevel === 0) {
+                    systemHealth = Math.max(0, systemHealth - 2);
+                    if (systemHealth === 0) {
+                        autoTowToMechanic();
+                    }
+                }
+            }
+            updateUI();
+        }, 4000);
+
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = clock.getElapsedTime();
+
+            // DIREÇÃO, COLISÃO E COLETA DE MOEDAS
+            if (isDriving) {
+                playerCar.position.x += carMoveDir * 0.15;
+                playerCar.position.x = Math.max(-3.5, Math.min(3.5, playerCar.position.x));
+
+                // Movimento e colisão com os carros do tráfego
+                trafficCars.forEach((tCar) => {
+                    tCar.position.z += 0.3;
+                    if (tCar.position.z > 5) {
+                        tCar.position.z = -50;
+                        tCar.position.x = (Math.random() - 0.5) * 6;
+                    }
+
+                    const dx = Math.abs(playerCar.position.x - tCar.position.x);
+                    const dz = Math.abs(playerCar.position.z - tCar.position.z);
+
+                    if (dx < 1.4 && dz < 2.0) {
+                        systemHealth = Math.max(0, systemHealth - 50);
+                        oilLevel = Math.max(0, oilLevel - 10);
+                        tCar.position.z = -50;
+                        updateUI();
+
+                        if (systemHealth <= 0) {
+                            carMoveDir = 0;
+                            autoTowToMechanic();
+                        } else {
+                            speak("POW! Bati o carro! Danificou os sistemas!");
+                        }
+                    }
+                });
+
+                // Movimento, rotação e coleta de moedas
+                driveCoins.forEach((cMesh) => {
+                    cMesh.position.z += 0.3;
+                    cMesh.rotation.z += 0.05; // Gira a moeda no ar
+
+                    if (cMesh.position.z > 5) {
+                        cMesh.position.z = -40 - Math.random() * 20;
+                        cMesh.position.x = (Math.random() - 0.5) * 6;
+                    }
+
+                    const dx = Math.abs(playerCar.position.x - cMesh.position.x);
+                    const dz = Math.abs(playerCar.position.z - cMesh.position.z);
+
+                    if (dx < 1.2 && dz < 1.5) {
+                        coins += 20;
+                        addXP(5);
+                        speak("💰 Coletou $20 na pista!");
+                        cMesh.position.z = -40 - Math.random() * 20;
+                        cMesh.position.x = (Math.random() - 0.5) * 6;
+                        updateUI();
+                    }
+                });
+            }
+
+            if (leftArm && rightArm && !isWorking && !isBrushing && !isSleeping) {
+                leftArm.rotation.z = Math.sin(time * 2) * 0.1;
+                rightArm.rotation.z = -Math.sin(time * 2) * 0.1;
+            }
+
+            if (activeMediaMode === 'video' && activeVideo && activeVideo.readyState >= activeVideo.HAVE_CURRENT_DATA) {
+                tvCtx.drawImage(activeVideo, 0, 0, 512, 320);
+                tvTexture.needsUpdate = true;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            adjustCamera();
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
